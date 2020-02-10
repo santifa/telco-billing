@@ -1,8 +1,7 @@
-(ns telco.template-test
-  (:require [telco.template :as sut]
-            [clojure.test :as t]))
+(ns telco-billing.core-test
+  (:require [clojure.test :refer :all]
+            [telco.core :refer :all]))
 
-(t/deftest read-template-files-test
-  (let [files (sut/read-template-files "resources/templates/evn-template")]
-    (t/is (= 1 (count files)))
-    (t/is (= [(java.io.File. "resources/templates/evn-template/main.tex")] files))))
+(deftest a-test
+  (testing "FIXME, I fail."
+    (is (= 0 1))))

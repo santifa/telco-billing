@@ -1,0 +1,58 @@
+\documentclass[
+fontsize=12pt, % font size
+version=last   % lates version of KOMA script
+]{scrlttr2}      % letter format
+
+%%%%% additional packages %%%%%
+\usepackage{eurosym} % euro symbol
+\usepackage{tabularx} % full width tables
+\usepackage{longtable} % table across multiple pages
+\usepackage{xcolor}
+\LoadLetterOption{DIN} % settings for DIN 676
+
+\LoadLetterOption{absender} % load senders data from *.lco file
+
+%%%%% non serif font 
+\renewcommand{\familydefault}{\sfdefault}
+
+%%%%% business line %%%%%
+
+ \setkomavar{myref}[Kundenummer]{##customer##}
+ \setkomavar{customer}[Kostenstelle]{##billing-pos##}
+ \setkomavar{invoice}{##billing-number##}            
+ \setkomavar{date}{\today}             
+
+%%%%% Subject %%%%%
+
+\setkomavar{subject}{Rechnung}
+
+%%%%% the document %%%%%
+
+\begin{document}
+
+%%%%% destination %%%%%
+
+\begin{letter}{
+##name##\\
+
+##street##\\
+
+##town##\\
+}
+
+\opening{Sehr geehrte Damen und Herren,}
+
+anbei finden sie ihre aktuelle Telefonabrechnung für den Monat ##billing-date##.
+Bitte überweisen Sie ##billing-fees## \euro\ auf das unten genannte Bankkonto innerhalb von
+2 Wochen.
+
+\closing{Mit freundlichen Grüßen,}
+
+
+\newpage
+\input{overview.tex}
+
+\newpage
+\input{evn.tex}
+
+\end{document}

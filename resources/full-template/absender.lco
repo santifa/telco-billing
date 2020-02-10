@@ -1,0 +1,194 @@
+\ProvidesFile{absender.lco}
+
+%%%%% Optionen %%%%%
+
+\KOMAoptions{
+firsthead=true,
+firstfoot=true,
+% fromemail=true,       % Email wird im Briefkopf angezeigt
+% fromphone=true,       % Telefonnumer wird im Briefkopf angezeigt
+% fromfax=true,         % Faxnummer wird im Briefkopf angezeit
+% fromurl=true,         % URL wird im Briefkopf angezeigt
+% fromlogo=true,        % Logo wird im Briefkopf angezeigt
+% subject=titled,       % Druckt "Betrifft: " vor dem Betreff
+locfield=narrow,          % Breite Absenderergänzung (location)
+%fromalign=right,         % Ausrichtung des Briefkopfes
+%fromrule=afteraddress,  % Trennlinie unter dem Briefkopf
+refline=wide,
+addrfield=topaligned,
+}
+
+%%%%% Sprachpakete Deutsch und Bilder
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[ngerman]{babel}
+\RequirePackage{graphicx}
+
+%%%%% Variablen %%%%%
+
+\@setplength{firstfootvpos}{270mm}
+\setkomavar{specialmail}[]{\vspace{2mm}}
+
+%%%%% Absender Postanschrift
+
+\setkomavar{fromname}{Some Company}
+\setkomavar{fromaddress}{Some Address}
+
+%%%%% Geschäftsführung
+
+\newkomavar[Geschäftsführerung]{geschaeftsfuehrung}
+\setkomavar{geschaeftsfuehrung}{Some Head of...}
+
+%%%%% Kontakt
+
+\setkomavar{fromphone}{+49\,0000\,0000\,00} % Telefonnummer
+\setkomavar{fromfax}{+49\,0000\,0000\,01} % Faxnummer
+\setkomavar{fromemail}{info@example.de} % Email-Adresse
+\setkomavar{fromurl}[Website:~]{example.com} % Website
+
+%%%%% Logo
+
+%%%%% Bankverbindung
+\setkomavar{frombank}{Some bank\\
+IBAN: DE00\,0000\,0000\,0000\,0000\,00\\
+BIC: XXXXXXXXXXX
+}
+
+%%%%% Gerichtsstand %%%%%
+
+\newkomavar[Gerichtsstand:]{gerichtsstand}
+\setkomavar{gerichtsstand}{AG Somewhere\\
+HRB 0000\\
+FA Somewhere\\
+000/000/00000\\
+Ust-Id: DE0000000000
+}
+
+
+%%%%% Signatur %%%%%
+
+\setkomavar{signature}{
+\usekomavar{fromname}
+}
+
+%%%%% Layout %%%%%
+
+%%%%% Absender oben rechts
+
+\setkomavar{firsthead}{\raggedright
+ \begin{flushright}
+  \vspace{5mm}
+  \usekomavar{fromlogo}\\
+  \scriptsize{
+   \usekomavar*{fromphone}\usekomavar{fromphone}\\
+   \usekomavar*{fromfax}\usekomavar{fromfax}\\[1ex]
+   \usekomavar*{fromemail}\usekomavar{fromemail}\\
+   \usekomavar*{fromurl}\usekomavar{fromurl}
+  }
+ \end{flushright}
+}
+
+
+%%%%% Erweiterer Absender für Bearbeiter
+
+% \setkomavar{location}{\raggedright
+%  \begin{flushright}
+%   \scriptsize{
+%    \vspace{10mm}
+%    \usekomavar*{bearbeiter}\\
+%    \usekomavar{bearbeiter}
+%   }
+%  \end{flushright}
+% }
+
+%%%%% Footer - Allgemeine Informationen
+
+\setkomavar{firstfoot}{\scriptsize
+ \parbox[t]{\textwidth}{
+  \begin{tabular}[t]{l@{}}
+   \usekomavar{fromname}\\
+   \usekomavar{fromaddress}\\[1ex]
+   \usekomavar*{geschaeftsfuehrung}\\
+   \usekomavar{geschaeftsfuehrung}
+  \end{tabular}
+  \hfill
+  \begin{tabular}[t]{l@{}}
+   \usekomavar*{gerichtsstand}\\
+   \usekomavar{gerichtsstand}
+  \end{tabular}
+  \hfill
+  \begin{tabular}[t]{l@{}}
+   Kontakt\\
+   \usekomavar*{fromphone}\usekomavar{fromphone}\\
+   \usekomavar*{fromfax}\usekomavar{fromfax}\\[1ex]
+   \usekomavar*{fromemail}\usekomavar{fromemail}\\
+   \usekomavar*{fromurl}\usekomavar{fromurl}
+  \end{tabular}
+  \hfill
+  \begin{tabular}[t]{l@{}}
+   \usekomavar{frombank}
+  \end{tabular}
+ }
+}
+
+%\renewcommand*{\raggedsignature}{\raggedright}
+
+\newcounter{section}
+\newcounter{subsection}[section]
+\newcounter{subsubsection}[subsection]
+\newcounter{paragraph}[subsubsection]
+\renewcommand*{\thesection}{\Alph{section}.}
+\renewcommand*{\thesubsection}{\Roman{subsection}.}
+\renewcommand*{\thesubsubsection}{\arabic{subsubsection}.}
+\renewcommand*{\theparagraph}{\alph{paragraph})}
+\renewcommand*{\p@subsection}{\thesection}
+\renewcommand*{\p@subsubsection}{\p@subsection\thesubsection}
+\renewcommand*{\p@paragraph}{\p@subsubsection\thesubsubsection}
+\newcommand*\addsec{\secdef\@addsec\@saddsec}
+\newcommand*{\@addsec}{}
+\def\@addsec[#1]#2{\section*{#2}\addcontentsline{toc}{section}{#1}
+  \if@twoside \@mkboth{#1}{}\else \@mkboth{#1}{#1}\fi}
+\newcommand*{\@saddsec}[1]{\section*{#1}\@mkboth{}{}}
+\let\size@section\normalsize
+\let\size@subsection\normalsize
+\let\size@subsubsection\normalsize
+\let\size@paragraph\normalsize
+\newcommand*{\scr@fnt@section}{\size@section}
+\newcommand*{\scr@fnt@subsection}{\size@subsection}
+\newcommand*{\scr@fnt@subsubsection}{\size@subsubsection}
+\newcommand*{\scr@fnt@paragraph}{\size@paragraph}
+\newkomafont{minisec}{}
+\newcommand*\sectfont{\normalcolor\sffamily\bfseries}
+\newcommand*{\scr@fnt@disposition}{\sectfont}
+\aliaskomafont{sectioning}{disposition}
+\setcounter{secnumdepth}{4}
+\newcommand\section{\@startsection{section}{1}{\z@}%
+  {-3.5ex \@plus -1ex \@minus -.2ex}%
+  {2.3ex \@plus.2ex}%
+  {\setlength{\parfillskip}{\z@ \@plus 1fil}%
+    \raggedsection\normalfont\usekomafont{disposition}\nobreak
+    \usekomafont{section}\nobreak}}
+\newcommand\subsection{\@startsection{subsection}{2}{\z@}%
+  {-3.25ex\@plus -1ex \@minus -.2ex}%
+  {1.5ex \@plus .2ex}%
+  {\setlength{\parfillskip}{\z@ \@plus 1fil}%
+    \raggedsection\normalfont\usekomafont{disposition}\nobreak
+    \usekomafont{subsection}\nobreak}}
+\newcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+  {-3.25ex\@plus -1ex \@minus -.2ex}%
+  {1.5ex \@plus .2ex}%
+  {\setlength{\parfillskip}{\z@ \@plus 1fil}%
+    \raggedsection\normalfont\usekomafont{disposition}\nobreak
+    \usekomafont{subsubsection}\nobreak}}
+\newcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+  {3.25ex \@plus1ex \@minus.2ex}%
+  {-1em}%
+  {\setlength{\parfillskip}{\z@ \@plus 1fil}%
+    \raggedsection\normalfont\usekomafont{disposition}\nobreak
+    \usekomafont{paragraph}\nobreak}}
+\newcommand\minisec[1]{\@afterindentfalse \vskip 1.5ex
+  {\parindent \z@
+    \raggedsection\normalfont\usekomafont{disposition}\nobreak%
+    \usekomafont{minisec}#1\par\nobreak}\nobreak
+  \@afterheading}
+\let\raggedsection\raggedright

@@ -1,0 +1,19 @@
+\documentclass[
+  fontsize=12pt, % font size
+  version=last   % lates version of KOMA script
+]{scrlttr2}      % letter format
+
+%%%%% additional packages %%%%%
+\usepackage{eurosym} % euro symbol
+\usepackage{tabularx} % full width tables
+\usepackage{longtable} % table across multiple pages
+\LoadLetterOption{DIN} % settings for DIN 676
+
+%%%%% non serif font 
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+
+\input{evn.tex}
+
+\end{document}

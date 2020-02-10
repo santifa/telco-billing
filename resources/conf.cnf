@@ -1,6 +1,6 @@
 {
   ; point to the latex template and customer database
-  :template "resources/example-template"
+  :template "resources/full-template"
   :db-file "resources/example.db"
   ; define the billing cost position and the starting billing number
   :cost-position "00",
