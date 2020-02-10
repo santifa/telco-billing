@@ -1,0 +1,21 @@
+{
+  ; point to the latex template and customer database
+  :template "resources/example-template"
+  :db-file "resources/example.db"
+  ; define the billing cost position and the starting billing number
+  :cost-position "00",
+  :bill-number-prefix "ABC", ; optional prefix for the bill number
+  :bill-number "100", ; a countalbe number for the bill
+  :bill-date "12-2019" ; the date of the bill
+  :basic-fees 20 ; basic fees for a connection point
+  :default-name "Example Con" ; default name of the connection point
+  :default-fees 1 ; when no other tzone can be applied
+  ; define the zoning to distinguish between different duration fees
+  ; The zoning is applied to a call iff some of the defined Zone numbers or names
+  ; match with the one defined by the call, otherwise the default-fees are applied.
+  :tzones [ ; fees in euro per minutes
+   ;; example german landline
+   {:name "Festnetz (dt.)" ; Name on the bill
+    :zone [0 2 8 "City" "Deutschland"] ; Zone definition from provider
+    :fees 0.01}] ; fees for the zone
+}

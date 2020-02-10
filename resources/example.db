@@ -1,0 +1,20 @@
+{
+    :customers [
+        {
+            :name "Customer 1"
+            :customer 1001
+            :street "Some Street 1"
+            :town "0000 Some City"
+            :connection-points [131 231]
+        }
+        {
+            :name "Customer 2"
+            :customer 1002
+            :street "Some Street 2"
+            :town "0000 Some City2"
+            :connection-points [
+               (filter (complement #{416 417 421 422 423 424}) (range 401 443))
+            ]
+        }
+    ]
+}
