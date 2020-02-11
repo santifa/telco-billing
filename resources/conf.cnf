@@ -16,6 +16,10 @@
   :tzones [ ; fees in euro per minutes
    ;; example german landline
    {:name "Festnetz (dt.)" ; Name on the bill
-    :zone [0 2 8 "City" "Deutschland"] ; Zone definition from provider
-    :fees 0.01}] ; fees for the zone
+    :zone [2 8 "City" "Deutschland"] ; Zone definition from provider
+    :fees 0.01} ; fees for the zone
+   {:name "Festnetz 2"
+    :zone [0]
+    :fees 10
+    :con-only true}]
 }

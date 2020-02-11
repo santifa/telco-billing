@@ -71,7 +71,9 @@
 
 (defn latex-converter [dir]
   (let [options {:dir dir}]
-    (exec/sh (conj latex-cmd "main.tex") options)
+    (println "Compiling template, first run")
+    @(exec/sh (conj latex-cmd "main.tex") options)
+    (println "Compiling template, second run")
     @(exec/sh (conj latex-cmd "main.tex") options)))
 
 (defn print-converter [dir]
@@ -79,7 +81,7 @@
 
 (def evn-list-template
   "\\hspace*{4mm}
-  Anschluss: ##con-point## Name: ##con-name## Grundgebühr: ##basic-fees## \\euro
+  Anschluss: ##con-point##
   \\begin{longtable}{@{\\extracolsep{\\fill}}XlXlXlXlXr@{}}
   Datum & Zielnummer & Dauer & Preiszone & Kosten\\\\\\hline
   ##calls## \\\\\\hline
@@ -88,9 +90,9 @@
 
 (def evn-list-template-empty
   "\\hspace*{4mm}
-  Anschluss: ##con-point## Name: ##con-name## Grundgebühr: ##basic-fees## \\euro\\\\
+  Anschluss: ##con-point##\\\\
   \\hspace*{4mm}
-  kein Verbindungen\\\\\\medskip")
+  keine abgehenden kostenpflichtigen Verbindungen\\\\\\medskip")
 
 (def evn-base-template
   "\\begin{tabular*}{\\textwidth}{c @{\\extracolsep{\\fill}} c c}
@@ -147,10 +149,12 @@
 
 (def overview-template
   "Gesamtübersicht
-  \\begin{longtable}{@{\\extracolsep{\\fill}}XcXcXrXrXr@{}}
+  \\begin{longtable}{@{\\extracolsep{\\fill}}XlXcXrXrXr@{}}
   Anschluss & Grundgebühr & Verbindungen & Dauer & Gesprächskosten\\\\\\hline
   ##con-points## \\\\\\hline
-  Kosten & & & & ##fees## \\euro
+  Kosten (Netto) & & & & ##fees## \\euro\\\\
+  Umsatzsteuer 19\\% & & & & ##ust## \\euro \\\\
+  Gesamt (Brutto) & & & & ##brutto## \\euro
   \\end{longtable}")
 
 (defn con->overview-line [con-point]
@@ -167,8 +171,11 @@
   (let [points (:connection-points bill)
         conss (map con->overview-line points)
         symbols {:fees (fees->ffees (:billing-fees bill))
-                 :con-points (str (str/join "\\\\ "
-                                            (map #(str (str/join " & " (vals %)) "\\ \\euro") conss)))}]
+                 :brutto (fees->ffees (* 1.19 (:billing-fees bill)))
+                 :ust (fees->ffees (* 0.19 (:billing-fees bill)))
+                 :con-points (str (str/join "\\\\"
+                                            (map #(clojure.string/trim (str (str/join " & " (vals %)) "\\euro")) conss)))}]
+    (pr (:con-points symbols))
     (replace-symbols symbols overview-template)))
 
 (defn fill-template [files symbols]
@@ -190,7 +197,7 @@
 (defn prepare-bill
   [template-files bill]
   (let* [sym (conj (dissoc bill :connection-points :customer) (:customer bill))
-        sym (assoc sym :billing-fees (fees->ffees (:billing-fees sym)))
+         sym (assoc sym :billing-fees (fees->ffees (* 1.19 (:billing-fees sym))))
         evn (str/join (create-evn bill))
         overview (str/join (create-overview bill))
         template (fill-template template-files sym)]

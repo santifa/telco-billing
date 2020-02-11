@@ -39,6 +39,11 @@
     (Integer/parseInt (str zone))
     (str zone)))
 
+(defn apply-fees [fees zone-name duration con-only?]
+  (if con-only?
+    {:zone-fees fees :zone-name zone-name :fees fees}
+    {:zone-fees fees :zone-name zone-name :fees (* (/ fees 60) duration)}))
+
 (defn calculate-tzone-fees
   "Calculate the fees of a call.
 
@@ -47,14 +52,14 @@
   [tzones default-fees call]
   (let [call-zone (parse-call-zone (:tzone call))
         fee-zone (first (filter #(in? call-zone (:zone %)) tzones))
+        con-only (:con-only fee-zone)
         duration (if (instance? java.lang.String (:duration call))
                    (Integer/parseInt (:duration call))
                    (:duration call))]
-    (if (map? fee-zone)
-      (conj call {:zone-fees (:fees fee-zone) :zone-name (:name fee-zone)
-                  :fees (* (/ (:fees fee-zone) 60) duration)})
-      (conj call {:zone-fees default-fees :name "Default Zone"
-                  :fees (* (/ default-fees 60) duration)}))))
+    (conj call
+          (if (map? fee-zone)
+             (apply-fees (:fees fee-zone) (:name fee-zone) duration con-only)
+             (apply-fees default-fees "Default Zone" duration con-only)))))
 
 (defn apply-tzones-on-calls
   "Apply the tzones to the calls of a connection point."
