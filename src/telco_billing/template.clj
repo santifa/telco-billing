@@ -123,7 +123,7 @@
   "Format a list of calls into a tex list."
   [calls]
   (map (fn [c] (str (datetime->formatedtime (:date c)) " & "
-                    (:target-number c) " & "
+                   (str (.substring (:target-number c) 0 (- (count (:target-number c)) 3)) "***") " & "
                     (seconds->duration (if (instance? java.lang.String (:duration c))
                                          (Integer/parseInt (:duration c))
                                          (:duration c))) " & "
@@ -158,6 +158,7 @@
   \\end{longtable}")
 
 (defn con->overview-line [con-point]
+  (pr (:point con-point))
   {:number (:num (:point con-point))
    :basic (:fees (:point con-point))
    :cons (reduce (fn [acc _] (+ acc 1)) 0 (:calls con-point))
@@ -175,7 +176,6 @@
                  :ust (fees->ffees (* 0.19 (:billing-fees bill)))
                  :con-points (str (str/join "\\\\"
                                             (map #(clojure.string/trim (str (str/join " & " (vals %)) "\\euro")) conss)))}]
-    (pr (:con-points symbols))
     (replace-symbols symbols overview-template)))
 
 (defn fill-template [files symbols]
@@ -201,7 +201,6 @@
         evn (str/join (create-evn bill))
         overview (str/join (create-overview bill))
         template (fill-template template-files sym)]
-    (pr sym)
     (conj template {:evn.tex evn :overview.tex overview})))
 
 (defn create-bill

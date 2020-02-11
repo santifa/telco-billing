@@ -33,12 +33,6 @@
                 p
                 {:num p :name dname :fees dfees})) points))
 
-(defn enhance-connection-points
-  "Add the default name and basic fees to connection points."
-  [customers basic-fees default-name]
-  (map #(update % :connection-points
-                enhance-connection-point basic-fees default-name)) customers)
-
 (defn load-db-file
   "Load and intially evalute the database.
 
@@ -47,8 +41,11 @@
   [{:keys [db-file basic-fees default-name]}]
   (when-let [db (load-edn-file db-file)]
     {:customers
-     (map #(update % :connection-points
-                   enhance-connection-point basic-fees default-name)
+     (map #(let [basic (if (:basic-fees %)
+                         (:basic-fees %)
+                         basic-fees)]
+             (update % :connection-points
+                     enhance-connection-point basic default-name))
           (eval-customers db))}))
 
 (defn startup

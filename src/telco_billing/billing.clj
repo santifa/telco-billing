@@ -91,11 +91,16 @@
 
 (defn generate-bill [customer input bill-number db]
   (let [{:keys [tzones default-fees basic-fees bill-date]} db
+        customer-fee (:basic-fees customer)
         con-points (assign-calls-to-connection-points
                     (:connection-points customer) input)
         con-points (apply-tzones-on-con-points con-points tzones default-fees)
         bill-header (generate-bill-header bill-number customer
-                                          con-points basic-fees bill-date)]
+                                          con-points
+                                          (if customer-fee
+                                            customer-fee
+                                            basic-fees)
+                                          bill-date)]
     (conj bill-header {:connection-points con-points})))
 
 ;; telco calculation
