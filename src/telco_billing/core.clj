@@ -73,7 +73,10 @@
         template-files (template/read-template-files (:template db))
         in (load-input-files files)
         bills (billing/generate-bills db in)]
-    (doall (template/create-bills template-files (:output options) bills))))
+    (condp = (:generate options)
+      "latex" (doall (template/create-bills template-files (:output options) bills))
+      "csv" (doall (template/bills->csv (:output options) bills))
+      :otherwise (println "No matchind generation Method found."))))
 
 ;; cli handling
 (def cli-options
@@ -89,7 +92,10 @@
    ["-c" "--config PATH" "Path to the configuration file."
     :default "resources/conf.cnf"
     :parse-fn #(io/file %)
-    :validate [#(.isFile %) "Must be a file denoting the config file."]]])
+    :validate [#(.isFile %) "Must be a file denoting the config file."]]
+   ["-g" "--generate PROCEDURE" "Which procedure is used as output. At the moment csv and latex are supported."
+    :default "latex"
+    :validate [#(billing/in? (str/lower-case %) ["csv" "latex"]) "Must be either csv or latex."]]])
 
 (defn usage [option-summary]
   (->> ["This is the telco billing automation."
@@ -133,3 +139,26 @@
     (if exit-message
       (exit-test (if ok? 0 1) exit-message)
       (run inputs options))))
+
+(defn customers-map->csv
+  "Utility function to convert a list of` customers` into a csv like format."
+  [customers]
+  (flatten (loop [in customers
+                  out []]
+             (if (empty? in)
+               out
+               (let [c (first in)
+                     n (:name c)
+                     f #(str n "," (:num %) "," (:fees %))]
+                 (recur (rest in)
+                        (conj out (map f (:connection-points c)))))))))
+
+(defn count-connection-points-by-fee [customers fees]
+  (reduce (fn [acc c]
+            (+ acc
+               (reduce
+                #(if (= fees (:fees %2)) (+ %1 1) 0) 0 (:connection-points c)))) 0 customers))
+
+(defn get-overall-fees [bills]
+  (reduce (fn [acc bill]
+            (+ acc (:billing-fees bill))) 0 bills))

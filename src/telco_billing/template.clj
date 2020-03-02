@@ -158,7 +158,6 @@
   \\end{longtable}")
 
 (defn con->overview-line [con-point]
-  (pr (:point con-point))
   {:number (:num (:point con-point))
    :basic (:fees (:point con-point))
    :cons (reduce (fn [acc _] (+ acc 1)) 0 (:calls con-point))
@@ -217,3 +216,22 @@
 (defn create-bills [template-files outdir bills]
   (let [f (partial create-bill template-files outdir)]
     (map f bills)))
+
+(defn bill->csv [outdir bill]
+  (let [name (str outdir "/" (:billing-name bill) ".csv")
+        header "Name,Grundgebühr,Anschlusspunkt,Dauer,Zielnummer,Zeit,Zone,Zonen-Gebühren,Gebühren"
+        keyseq [:duration :target-number :date :zone-name :zone-fees :fees]
+        content (flatten
+                 (map (fn [con]
+                        (if (seq (:calls con))
+                          (map #(str (:name (:customer bill)) "," (get-in con [:point :fees]) ","
+                                     (get-in con [:point :num]) ","
+                                     (str/join "," (map % keyseq)) "") (:calls con))
+                          (str (:name (:customer bill)) "," (get-in con [:point :fees]) ","
+                               (get-in con [:point :num]) ",,,,,,")))
+                      (:connection-points bill)))]
+    (println "Creating " name)
+    (spit name (str header "\n" (str/join "\n" content)))))
+
+(defn bills->csv [outdir bills]
+  (map (partial bill->csv outdir) bills))
