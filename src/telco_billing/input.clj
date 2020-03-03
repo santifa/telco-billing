@@ -24,12 +24,13 @@
 
 (defn row->internal [record]
   (let [date (.parse (java.text.SimpleDateFormat. "dd.MM.yyyy HH:mm:ss")
-                     (get record "Datum und Zeit"))]
+                     (get record "Datum und Zeit"))
+        target (get record "Gewählte Nummer")]
     (.setHours date (+ 1 (.getHours date)))
     {:con-point (get record "Rufnummer")
      :tzone (get record "Tarif")
      :duration (time->duration (get record "Dauer"))
-     :target-number (get record "Gewählte Nummer")
+     :target-number (str (subs target 0 (- (count target) 4)) "****")
      :date date}))
 
 (defn convert-csv-input [in]
@@ -47,7 +48,7 @@
     {:con-point (:NEBENST record)
      :tzone (:ZONE record)
      :duration (:DAUER record)
-     :target-number (:ZIELNR record)
+     :target-number (str (subs (:ZIELNR record) 0 (- (count (:ZIELNR record)) 4)) "****")
      :date (.parse (java.text.SimpleDateFormat. "yyyyMMdd HHmmssZ") date)}))
 
 (defn convert-dbase-input
