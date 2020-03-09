@@ -76,7 +76,7 @@
     (condp = (:generate options)
       "latex" (doall (template/create-bills template-files (:output options) bills))
       "csv" (doall (template/bills->csv (:output options) bills))
-      :otherwise (println "No matchind generation Method found."))))
+      :otherwise (println "No matching generation Method found."))))
 
 ;; cli handling
 (def cli-options

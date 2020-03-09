@@ -85,7 +85,7 @@
         basic-fees (* basic-fees (count con-points))]
     {:billing-date date
      :billing-number bill-number
-     :billing-name (str (:customer customer) "_" bill-number)
+     :billing-name (str (:name customer) "_" bill-number)
      :billing-fees (+ basic-fees fees)
      :customer (dissoc customer :connection-points)}))
 
