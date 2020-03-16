@@ -109,7 +109,7 @@
   "Formate a `date` and time into a friendly human readable variation."
   [date]
   (str (.format
-        (java.text.SimpleDateFormat. "dd.MM.yyyy hh:mm:ss") date)))
+        (java.text.SimpleDateFormat. "dd.MM.yyyy HH:mm:ss") date)))
 
 (defn seconds->duration
   "Convert `seconds` into a duration of hours, minutes and seconds."
