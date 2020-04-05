@@ -152,7 +152,7 @@
   \\begin{longtable}{@{\\extracolsep{\\fill}}XlXcXrXrXr@{}}
   Anschluss & Grundgebühr & Verbindungen & Dauer & Gesprächskosten\\\\\\hline
   ##con-points## \\\\\\hline
-  Kosten (Netto) & & & & ##fees## \\euro\\\\
+  Kosten (Netto) & ##basic## \\euro & & & ##fees## \\euro\\\\
   Umsatzsteuer 19\\% & & & & ##ust## \\euro \\\\
   Gesamt (Brutto) & & & & ##brutto## \\euro
   \\end{longtable}")
@@ -170,11 +170,17 @@
 (defn create-overview [bill]
   (let [points (:connection-points bill)
         conss (map con->overview-line points)
-        symbols {:fees (fees->ffees (:billing-fees bill))
+        symbols {:basic (reduce (fn [acc e]
+                                  (+ acc (:basic e))) 0 conss)
+                 :fees (fees->ffees (:billing-fees bill))
                  :brutto (fees->ffees (* 1.19 (:billing-fees bill)))
                  :ust (fees->ffees (* 0.19 (:billing-fees bill)))
-                 :con-points (str (str/join "\\\\"
-                                            (map #(clojure.string/trim (str (str/join " & " (vals %)) "\\euro")) conss)))}]
+                 :con-points (str
+                              (str/join "\\\\"
+                                        (map #(clojure.string/trim
+                                               (str (str/join " & " (vals %)) "\\euro"))
+                                             (map #(assoc % :basic (str (:basic %) "\\euro"))
+                                                  conss))))}]
     (replace-symbols symbols overview-template)))
 
 (defn fill-template [files symbols]

@@ -103,16 +103,33 @@
                                           bill-date)]
     (conj bill-header {:connection-points con-points})))
 
+(defn remaining-input
+  "Remove already assigned records from the input.
+
+  This solves the problem of double assigning records with the same
+  suffix like 1261 and 261. But this also enforces that longer suffixes
+  are processed first."
+  [records con-points]
+  (loop [in con-points
+         out records]
+    (if (empty? in)
+      out
+      (recur (rest in)
+             (filter #(not (valid-point? (first in) %)) out)))))
+
 ;; telco calculation
 (defn generate-bills [db input]
   (when input
     (let [{:keys [customers bill-number bill-number-prefix]} db]
       (loop [in customers
              bill-number (Integer/parseInt bill-number)
+             records input
              out []]
         (if (empty? in)
           out
           (let [bill-num (str bill-number-prefix bill-number)
-                bill (generate-bill (first in) input bill-num db)]
-          (recur (rest in) (inc bill-number)
+                bill (generate-bill (first in) records bill-num db)
+                records (remaining-input records
+                                         (map #(:num %) (:connection-points (first in))))]
+          (recur (rest in) (inc bill-number) records
                  (conj out (conj bill {:billing-pos (:cost-position db)})))))))))
