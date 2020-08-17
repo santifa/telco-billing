@@ -153,7 +153,7 @@
   Anschluss & Grundgebühr & Verbindungen & Dauer & Gesprächskosten\\\\\\hline
   ##con-points## \\\\\\hline
   Kosten (Netto) & ##basic## \\euro & & & ##fees## \\euro\\\\
-  Umsatzsteuer 19\\% & & & & ##ust## \\euro \\\\
+  Umsatzsteuer 16\\% & & & & ##ust## \\euro \\\\
   Gesamt (Brutto) & & & & ##brutto## \\euro
   \\end{longtable}")
 
@@ -173,8 +173,8 @@
         symbols {:basic (reduce (fn [acc e]
                                   (+ acc (:basic e))) 0 conss)
                  :fees (fees->ffees (:billing-fees bill))
-                 :brutto (fees->ffees (* 1.19 (:billing-fees bill)))
-                 :ust (fees->ffees (* 0.19 (:billing-fees bill)))
+                 :brutto (fees->ffees (* 1.16 (:billing-fees bill)))
+                 :ust (fees->ffees (* 0.16 (:billing-fees bill)))
                  :con-points (str
                               (str/join "\\\\"
                                         (map #(clojure.string/trim
@@ -202,7 +202,7 @@
 (defn prepare-bill
   [template-files bill]
   (let* [sym (conj (dissoc bill :connection-points :customer) (:customer bill))
-         sym (assoc sym :billing-fees (fees->ffees (* 1.19 (:billing-fees sym))))
+         sym (assoc sym :billing-fees (fees->ffees (* 1.16 (:billing-fees sym))))
         evn (str/join (create-evn bill))
         overview (str/join (create-overview bill))
         template (fill-template template-files sym)]
