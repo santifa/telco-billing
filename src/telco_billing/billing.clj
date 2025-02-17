@@ -78,15 +78,18 @@
   (let [f (partial apply-tzones-on-calls tzones default-fees)]
     (map #(calculate-connection-point-fees (assoc % :calls (f (:calls %)))) con-points)))
 
+(defn round [number]
+  (/ (Math/round (* number 100.0)) 100.0))
+
 (defn generate-bill-header
-  "Get the header informations used later in the templating to generate a bill."
+  "Get the header information used later in the templating to generate a bill."
   [bill-number customer con-points basic-fees date]
   (let [fees (reduce #(+ %1 (:fees %2)) 0 con-points)
         basic-fees (* basic-fees (count con-points))]
     {:billing-date date
      :billing-number bill-number
      :billing-name (str (:name customer) "_" bill-number)
-     :billing-fees (+ basic-fees fees)
+     :billing-fees (round (+ basic-fees fees))
      :customer (dissoc customer :connection-points)}))
 
 (defn generate-bill [customer input bill-number db]

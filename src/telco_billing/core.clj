@@ -4,10 +4,11 @@
    [telco-billing.input :as in]
    [telco-billing.template :as template]
    [telco-billing.billing :as billing]
+   [clojure.spec.alpha :as s]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
-   [clojure.tools.cli :refer [parse-opts]]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [cli-matic.core :refer [run-cmd]]))
 
 ;;; Load database and configuration files
 (defn load-edn-file
@@ -33,31 +34,25 @@
                 p
                 {:num p :name dname :fees dfees})) points))
 
-(defn load-db-file
-  "Load and intially evalute the database.
+(defn update-customer-database
+  "Evaluate and update the customer database.
+  This evaluates open clojure forms which define possible connection points."
+  [{:keys [customers basic-fees default-name] :as db}]
+  (assoc db :customers
+   (->> customers
+      (map #(assoc % :connection-points (evaluate-range %)))
+      (map #(let [basic (or (:basic-fees %) basic-fees)]
+              (update % :connection-points
+                      enhance-connection-point basic default-name))))))
 
-  Provide a map with a path to the `db-file`, the `basic-fees`
-  for a connection point and its `default-name`"
-  [{:keys [db-file basic-fees default-name]}]
-  (when-let [db (load-edn-file db-file)]
-    {:customers
-     (map #(let [basic (if (:basic-fees %)
-                         (:basic-fees %)
-                         basic-fees)]
-             (update % :connection-points
-                     enhance-connection-point basic default-name))
-          (eval-customers db))}))
-
-(defn startup
-  "Merge the different config and database files into one.
-  The priority is first the config file second the database file
-  and third the cli input."
-  [options]
-  (let [config (load-edn-file (:config options))
-        config (if (:db-file config)
-                 config
-                 (assoc config :db-file (:db options)))]
-    (merge config (load-db-file config))))
+(defn load-configuration
+  "Load configuration and customer database.
+  Prefer customer database defined in configuration file if present."
+  [config db]
+  (let [config (load-edn-file config)]
+   (merge
+    config
+    (load-edn-file (or (:db-file config) db)))))
 
 (defn parse-input [file]
   (if (str/ends-with? (.toUpperCase (.getName file)) ".DBF")
@@ -68,77 +63,61 @@
   (flatten (conj (map parse-input files))))
 
 ;;; main functions
-(defn run [files options]
-  (let [db (startup options)
+(defn run [{:keys [files output db config format]}]
+  (when (seq files)
+    (println "No input files provided")
+    (System/exit 1))
+
+  (let [db (update-customer-database (load-configuration config db))
         template-files (template/read-template-files (:template db))
         in (load-input-files files)
         bills (billing/generate-bills db in)]
-    (condp = (:generate options)
-      "latex" (doall (template/create-bills template-files (:output options) bills))
-      "csv" (doall (template/bills->csv (:output options) bills))
+    (condp = (format)
+      "latex" (doall (template/create-bills template-files output bills))
+      "csv" (doall (template/bills->csv output bills))
       :otherwise (println "No matching generation Method found."))))
 
-;; cli handling
-(def cli-options
-  [["-h" "--help"]
-   ["-o" "--output PATH" "Path to output directory"
-    :default "out"
-    :parse-fn #(io/file %)
-    :validate [#(.isDirectory %) "Must be a file denoting a folder."]]
-   ["-d" "--db PATH" "Path to the customer database."
-    :default "resources/customer.db"
-    :parse-fn #(io/file %)
-    :validate [#(.isFile %) "Must be a file denoting the database."]]
-   ["-c" "--config PATH" "Path to the configuration file."
-    :default "resources/conf.cnf"
-    :parse-fn #(io/file %)
-    :validate [#(.isFile %) "Must be a file denoting the config file."]]
-   ["-g" "--generate PROCEDURE" "Which procedure is used as output. At the moment csv and latex are supported."
-    :default "latex"
-    :validate [#(billing/in? (str/lower-case %) ["csv" "latex"]) "Must be either csv or latex."]]])
+(s/def ::file #(.isFile (io/file %)))
+(s/def ::directory #(.isDirectory (io/file %)))
 
-(defn usage [option-summary]
-  (->> ["This is the telco billing automation."
-        ""
-        ""
-        "Usage: telco [options] <dbase input>"
-        ""
-        "Options:"
-        option-summary
-        ""
-        "The defaults are pointing to the test development enviroment."]))
-
-(defn error-msg [errors]
-  (str "The following errors occured by parsing the cli arguments:\n\n"
-       (clojure.string/join \newline errors)))
-
-(defn validate-args [args]
-  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options)]
-    (cond
-      (:help options)
-      {:exit-message (usage summary) :ok? true}
-      errors
-      {:exit-message (error-msg errors)}
-      (and (pos? (count arguments))
-           (.isFile (io/file (first arguments))))
-      {:inputs (map io/file arguments) :options options}
-      :else
-      {:exit-message (usage summary)})))
-
-(defn exit [status msg]
-  (println msg)
-  (System/exit status))
-
-(defn exit-test [status msg]
-  (println status ":" msg))
+(def ARGS
+  {:command "telco"
+   :description "A telco billing automation tool."
+   :version "0.1.3"
+   :opts [{:option "output"
+           :short "o"
+           :as "Path to output directory"
+           :type :string
+           :default "out"
+           :spec ::directory}
+          {:option "db"
+           :short "d"
+           :as "Path to the customer database"
+           :type :string
+           :default "resources/customer.db"
+           :spec ::file}
+          {:option "config"
+           :short "c"
+           :as "Path to the configuration file"
+           :type :string
+           :default "resources/conf.cnf"
+           :spec ::file}
+          {:option "format"
+           :short "f"
+           :as "Which format is used as output. At the moment csv and latex are supported."
+           :type #{"csv" "latex"}
+           :default "latex"}
+          {:option "files"
+           :short 0
+           :as "Input files"
+           :type :string
+           :multiple true}]
+   :runs run})
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "Simply start the telco billing automation and parse the arguments."
   [& args]
-  (let [{:keys [inputs options exit-message ok?]} (validate-args args)]
-    (if exit-message
-      (exit-test (if ok? 0 1) exit-message)
-      (run inputs options))))
+  (run-cmd args ARGS))
 
 (defn customers-map->csv
   "Utility function to convert a list of` customers` into a csv like format."
