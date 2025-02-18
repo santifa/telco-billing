@@ -73,14 +73,13 @@
 (defn set-log-level
   "Set the global log level to info if verbose flag is not set."
   [verbose]
-  (when verbose
-    (timbre/set-level! :debug)))
+  (when-not verbose
+    (timbre/set-level! :info)))
 
 ;;; main functions
 (defn run
   "Run the generation of invoices out of telco dbf files."
   [{:keys [output db config format] :as args}]
-  (prn args)
   (set-log-level (:verbose args))
   (timbre/debug args)
 
@@ -88,14 +87,15 @@
     (timbre/error "No input files provided.")
     (System/exit 1))
 
-  (let [customer-db (update-customer-database (load-configuration config db))]
+  (let [customer-db (update-customer-database (load-configuration config db))
+        template (:template customer-db)]
     (timbre/debug "Configuration file:" customer-db)
     (timbre/debug "Load files:" (:_arguments args))
-    (timbre/debug "Load template files:" (:template customer-db))
+    (timbre/debug "Load template files:" template)
 
     (try
       (let [input (parse-input-files (:_arguments args))
-            template (template/read-template-files (:template customer-db))
+            ;; template (template/read-template-files (:template customer-db))
             bills (billing/generate-bills customer-db input)]
         (condp = format
           "latex" (doall (template/create-bills template output bills))

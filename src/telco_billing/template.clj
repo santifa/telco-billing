@@ -1,36 +1,26 @@
 (ns telco-billing.template
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [taoensso.timbre :as timbre]
             [clj-commons-exec :as exec]))
 
-;; read template files
-(defn read-template-files
-  "Read a folder of latex template files."
-  [path]
-  (into {} (map (fn [f] {(keyword (.getName f)) f}) (drop 1 (file-seq (io/file path))))))
+(defn- copy-file
+  [temp-dir f]
+  (let [destination (io/file temp-dir (.getName f))]
+    (try
+      (io/copy f destination)
+      (catch Exception e
+        (timbre/error "Failed to setup temporary environment.")
+        (timbre/error e)))))
 
-;; temp handling
-(defn mk-tmp-dir
-  "Create a new template folder in the systems temp directory."
-  []
-  (let [base-dir (io/file (System/getProperty "java.io.tmpdir"))
+(defn create-temp-env [template-folder]
+  (let [template-files (->> template-folder io/file file-seq (drop 1))
+        base-dir (io/file (System/getProperty "java.io.tmpdir"))
         base-name (str "billing-" (System/currentTimeMillis) "-" (long (rand 1000000000)))
-        tmp-dir (io/file (str base-dir "/" base-name))]
-    (.mkdir tmp-dir)
-    tmp-dir))
-
-(defn write-template-file [folder template]
-  (let [s (seq template)
-        filename (name (first s))
-        destination (io/file folder filename)]
-    (printf "copying from %s to %s\n" filename destination)
-    (when-not (.isDirectory (io/file (second s)))
-     (if (instance? java.io.File (second s))
-       (io/copy (second s) destination)
-       (spit destination (second s))))))
-
-(defn get-tmp-enviroment [tmp-dir templates]
-  (doall (map (partial write-template-file tmp-dir) templates)))
+        temp-dir (io/file (str base-dir "/" base-name))]
+    (.mkdir temp-dir)
+    (doall (map (partial copy-file temp-dir) template-files))
+    temp-dir))
 
 ;; templating engine
 ;; only symbols are replaced, no recursion
@@ -71,13 +61,13 @@
 
 (defn latex-converter [dir]
   (let [options {:dir dir}]
-    (println "Compiling template, first run")
+    (timbre/info "Compiling template, first run")
     @(exec/sh (conj latex-cmd "main.tex") options)
-    (println "Compiling template, second run")
+    (timbre/info "Compiling template, second run")
     @(exec/sh (conj latex-cmd "main.tex") options)))
 
-(defn print-converter [dir]
-  (map (comp print slurp) (read-template-files dir)))
+;; (defn print-converter [dir]
+;;   (map (comp print slurp) (read-template-files dir)))
 
 (def evn-list-template
   "\\hspace*{4mm}
@@ -184,43 +174,45 @@
     (replace-symbols symbols overview-template)))
 
 (defn fill-template [files symbols]
-  (into {}
-        (for [file files]
-          (let [f (val file)]
-            (if (or (str/ends-with? (.getName f) "png") (.isDirectory (io/file f)))
-             file
-             {(key file)
-              (replace-empty-symbols (replace-symbols symbols (slurp f)))})))))
-
-(defn get-pdf-name
-  "Get the path of the result file and maybe create the output directory."
-  [outdir name]
-  (when-not (.exists (io/file outdir))
-    (.mkdir (io/file outdir)))
-  (io/file outdir (str name ".pdf")))
+  (doseq [f files]
+    (when-not (or (str/ends-with? (.getName f) "png") (.isDirectory (io/file f)))
+      (spit f (replace-empty-symbols (replace-symbols symbols (slurp f)))))))
 
 (defn prepare-bill
-  [template-files bill]
-  (let* [sym (conj (dissoc bill :connection-points :customer) (:customer bill))
-         sym (assoc sym :billing-fees (fees->ffees (* 1.16 (:billing-fees sym))))
-        evn (str/join (create-evn bill))
-        overview (str/join (create-overview bill))
-        template (fill-template template-files sym)]
-    (conj template {:evn.tex evn :overview.tex overview})))
+  [temp-dir bill]
+  (let* [evn (str/join (create-evn bill))
+         overview (str/join (create-overview bill))]
+    (spit (io/file temp-dir "evn.tex") evn)
+    (spit (io/file temp-dir "overview.tex") overview)))
+
+(defn prepare-template
+  [temp-dir bill]
+  (let [sym (conj (dissoc bill :connection-points :customer) (:customer bill))
+        sym (assoc sym :billing-fees (fees->ffees (* 1.16 (:billing-fees sym))))]
+    (fill-template (file-seq temp-dir) sym)))
 
 (defn create-bill
   "Create a new bill in a clean temporary enviroment and return the resulting pdf."
-  ([template-files outdir bill]
-   (let [temp-dir (mk-tmp-dir)
-         destination-file (get-pdf-name outdir (:billing-name bill))
-         billing-files (prepare-bill template-files bill)]
-     (get-tmp-enviroment temp-dir billing-files)
+  ([template outdir bill]
+   (let [temp-dir (create-temp-env template)
+         destination-file (io/file outdir (str (:billing-name bill) ".pdf"))]
+     (timbre/info "Created temp environment " temp-dir " for " (:billing-name bill))
+     (timbre/debug "Replace symbols in template files")
+     (prepare-template temp-dir bill)
+     (timbre/debug "Write evn and overview files")
+     (prepare-bill temp-dir bill)
+     (timbre/debug "Starting pdflatex")
      (convert latex-converter temp-dir)
-     (let [res (io/copy (io/file temp-dir "main.pdf") destination-file)]
-       (println "copying " (.getName destination-file)  " to " (.getPath destination-file))))))
 
-(defn create-bills [template-files outdir bills]
-  (let [f (partial create-bill template-files outdir)]
+     (try
+       (io/copy (io/file temp-dir "main.pdf") destination-file)
+       (timbre/info "Copied " (.getName destination-file)  " to " (.getPath destination-file))
+       (catch Exception e
+         (timbre/error "Failed to copy resulting pdf")
+         (timbre/error e))))))
+
+(defn create-bills [template outdir bills]
+  (let [f (partial create-bill template outdir)]
     (map f bills)))
 
 (defn bill->csv [outdir bill]
