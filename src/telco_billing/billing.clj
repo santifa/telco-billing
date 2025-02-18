@@ -84,7 +84,7 @@
 (defn generate-bill-header
   "Get the header information used later in the templating to generate a bill."
   [bill-number customer con-points basic-fees date]
-  (let [fees (reduce #(+ %1 (:fees %2)) 0 con-points)
+  (let [fees (reduce #(+ %1 (round (:fees %2))) 0 con-points)
         basic-fees (* basic-fees (count con-points))]
     {:billing-date date
      :billing-number bill-number
