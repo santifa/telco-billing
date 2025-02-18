@@ -107,6 +107,20 @@ folder which is not present if you only use the jar file.
 -c, --config PATH [resources/conf.cnf] - Set the configuration file
 ```
 
+## Development
+
+Compile the project with:
+
+``` clojure
+lein uberjar
+```
+
+Or run the project directly with:
+
+``` clojure
+lein run <arguments>
+```
+
 ### Bugs
 
 If you find some bug fill an issue.

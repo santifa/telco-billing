@@ -8,7 +8,8 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [cli-matic.core :refer [run-cmd]]))
+   [cli-matic.core :refer [run-cmd]]
+   [taoensso.timbre :as timbre]))
 
 ;;; Load database and configuration files
 (defn load-edn-file
@@ -38,6 +39,7 @@
   "Evaluate and update the customer database.
   This evaluates open clojure forms which define possible connection points."
   [{:keys [customers basic-fees default-name] :as db}]
+  (timbre/debug "Evaluate custom connection point definitions.")
   (assoc db :customers
    (->> customers
       (map #(assoc % :connection-points (evaluate-range %)))
@@ -49,6 +51,7 @@
   "Load configuration and customer database.
   Prefer customer database defined in configuration file if present."
   [config db]
+  (timbre/debug "Load configuration file and customer database")
   (let [config (load-edn-file config)]
    (merge
     config
@@ -59,23 +62,49 @@
     (in/parse-dbase-file file)
     (in/parse-csv-file file)))
 
-(defn load-input-files [files]
-  (flatten (conj (map parse-input files))))
+(defn parse-input-files
+  "Read a list of strings as files and parse them into clojure maps."
+  [files]
+  (->> files
+     (map io/file)
+     (map parse-input)
+     flatten))
+
+(defn set-log-level
+  "Set the global log level to info if verbose flag is not set."
+  [verbose]
+  (when verbose
+    (timbre/set-level! :debug)))
 
 ;;; main functions
-(defn run [{:keys [files output db config format]}]
-  (when (seq files)
-    (println "No input files provided")
+(defn run
+  "Run the generation of invoices out of telco dbf files."
+  [{:keys [output db config format] :as args}]
+  (prn args)
+  (set-log-level (:verbose args))
+  (timbre/debug args)
+
+  (when-not (seq (:_arguments args))
+    (timbre/error "No input files provided.")
     (System/exit 1))
 
-  (let [db (update-customer-database (load-configuration config db))
-        template-files (template/read-template-files (:template db))
-        in (load-input-files files)
-        bills (billing/generate-bills db in)]
-    (condp = (format)
-      "latex" (doall (template/create-bills template-files output bills))
-      "csv" (doall (template/bills->csv output bills))
-      :otherwise (println "No matching generation Method found."))))
+  (let [customer-db (update-customer-database (load-configuration config db))]
+    (timbre/debug "Configuration file:" customer-db)
+    (timbre/debug "Load files:" (:_arguments args))
+    (timbre/debug "Load template files:" (:template customer-db))
+
+    (try
+      (let [input (parse-input-files (:_arguments args))
+            template (template/read-template-files (:template customer-db))
+            bills (billing/generate-bills customer-db input)]
+        (condp = format
+          "latex" (doall (template/create-bills template output bills))
+          "csv" (doall (template/bills->csv output bills))
+          :otherwise (timbre/error "No matching generation Method found.")))
+
+      (catch Exception e
+        (timbre/error "Failed with exception")
+        (timbre/error e)))))
 
 (s/def ::file #(.isFile (io/file %)))
 (s/def ::directory #(.isDirectory (io/file %)))
@@ -107,11 +136,12 @@
            :as "Which format is used as output. At the moment csv and latex are supported."
            :type #{"csv" "latex"}
            :default "latex"}
-          {:option "files"
-           :short 0
-           :as "Input files"
-           :type :string
-           :multiple true}]
+          {:option "verbose"
+           :short "v"
+           :as "Enable verbose logging"
+           :default false
+           :type :with-flag}]
+   :examples "java -jar telco-billing.jar -v file1.DBF file2.DBF file2.csv"
    :runs run})
 
 (defn -main

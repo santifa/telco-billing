@@ -5,7 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [cli-matic "0.5.4"]
-                 [org.clojure/tools.cli "0.4.2"]
+                 [com.taoensso/timbre "6.6.1"]
                  [org.clojure/data.csv "0.1.4"]
                  [clj-dbase "0.1.0"]
                  [org.clojars.hozumi/clj-commons-exec "1.2.0"]]
