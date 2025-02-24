@@ -1,5 +1,5 @@
 (ns telco-billing.template-test
-  (:require [telco.template :as sut]
+  (:require [telco-billing.template :as sut]
             [clojure.test :as t]))
 
 (t/deftest read-template-files-test
